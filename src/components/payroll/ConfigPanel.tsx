@@ -3,8 +3,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import { DEFAULT_CONFIG, type PayrollConfig } from "@/lib/payroll";
-import { Settings2, RotateCcw } from "lucide-react";
+import { Settings2, RotateCcw, HardDriveDownload } from "lucide-react";
+
+export const CONFIG_STORAGE_KEY = "payrollvn:config:v1";
 
 interface Props {
   config: PayrollConfig;
@@ -13,6 +16,16 @@ interface Props {
 
 export function ConfigPanel({ config, setConfig }: Props) {
   const update = (patch: Partial<PayrollConfig>) => setConfig({ ...config, ...patch });
+
+  const handleReset = () => {
+    setConfig(DEFAULT_CONFIG);
+    try {
+      localStorage.removeItem(CONFIG_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    toast.success("Đã khôi phục công thức mặc định 2024");
+  };
 
   return (
     <Card className="p-5 md:p-6 shadow-soft">
@@ -23,10 +36,13 @@ export function ConfigPanel({ config, setConfig }: Props) {
           </div>
           <div>
             <h3 className="font-semibold">Tùy chỉnh công thức</h3>
-            <p className="text-xs text-muted-foreground">Điều chỉnh tỷ lệ, mức trần, bậc thuế</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <HardDriveDownload className="h-3 w-3" />
+              Tự động lưu vào trình duyệt — áp dụng cho mọi lần tính
+            </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setConfig(DEFAULT_CONFIG)}>
+        <Button variant="outline" size="sm" onClick={handleReset}>
           <RotateCcw className="h-3.5 w-3.5 mr-1" />Mặc định 2024
         </Button>
       </div>
