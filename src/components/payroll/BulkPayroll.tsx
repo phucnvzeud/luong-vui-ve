@@ -171,6 +171,18 @@ export function BulkPayroll({ config }: Props) {
                 <td className="py-2 px-2 border-b border-border/50 text-muted-foreground text-xs">{i + 1}</td>
                 <CellText value={emp.employeeCode ?? ""} onChange={(v) => update(emp.id, "employeeCode", v)} w="min-w-[80px]" />
                 <CellText value={emp.name} onChange={(v) => update(emp.id, "name", v)} w="min-w-[160px]" />
+                <td className="py-1 px-1 border-b border-border/50 w-[120px]">
+                  <Select
+                    value={emp.level ?? "__none__"}
+                    onValueChange={(v) => update(emp.id, "level", v === "__none__" ? undefined : (v as EmployeeLevel))}
+                  >
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">—</SelectItem>
+                      {EMPLOYEE_LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </td>
                 <CellText value={emp.position ?? ""} onChange={(v) => update(emp.id, "position", v)} w="min-w-[130px]" />
                 <CellNum value={emp.contractSalary} onChange={(v) => update(emp.id, "contractSalary", v)} />
                 <CellNum value={emp.insuranceSalary} onChange={(v) => update(emp.id, "insuranceSalary", v)} />
@@ -205,7 +217,7 @@ export function BulkPayroll({ config }: Props) {
               </tr>
             ))}
             <tr className="bg-primary/5 font-semibold">
-              <td colSpan={14} className="py-3 px-2 text-sm">TỔNG CỘNG ({rows.length} NV)</td>
+              <td colSpan={15} className="py-3 px-2 text-sm">TỔNG CỘNG ({rows.length} NV)</td>
               <NumOut value={totals.gross} />
               <NumOut value={totals.ins} className="text-destructive" />
               <NumOut value={totals.pit} className="text-warning-foreground" />
