@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  calculatePayroll, formatNumber, makeBlankEmployee, EMPLOYEE_LEVELS,
+  calculatePayroll, formatNumber, makeBlankEmployee, EMPLOYEE_LEVELS, computeLevelDefaults,
   type EmployeeInput, type PayrollConfig, type Region, type EmployeeLevel,
 } from "@/lib/payroll";
 import { Plus, Trash2, FileSpreadsheet, Users2 } from "lucide-react";
@@ -50,6 +50,15 @@ export function BulkPayroll({ config }: Props) {
       const next = { ...r, [key]: value };
       if (key === "totalWorkingDays") {
         next.lunchAllowance = Math.max(0, Number(value) || 0) * config.lunchPerDay;
+      }
+      // Auto-fill phụ cấp khi đổi Cấp nhân sự
+      if (key === "level" && value) {
+        const d = computeLevelDefaults(next, config);
+        next.transportationAllowance = d.transportation;
+        next.fixedPhoneAllowance = d.phone;
+        next.attendanceBonus = d.attendance;
+        next.housingNonTaxable = d.housing;
+        next.performanceBonus = d.performanceBonus;
       }
       return next;
     }));
@@ -96,7 +105,6 @@ export function BulkPayroll({ config }: Props) {
       "Housing (T)": Math.round(res.taxableBreakdown.housing),
       "OT": Math.round(res.taxableBreakdown.ot),
       "Khác (T)": Math.round(res.taxableBreakdown.other),
-      "Bonus (auto)": Math.round(res.autoAllowances.bonus),
       "Total Taxable Benefits": Math.round(res.totalTaxableBenefits),
       "Gross Income": Math.round(res.grossIncome),
       "Taxable Income": Math.round(res.taxableIncomeGross),

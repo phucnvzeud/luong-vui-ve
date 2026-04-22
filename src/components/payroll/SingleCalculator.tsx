@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  calculatePayroll, formatVND, makeBlankEmployee, EMPLOYEE_LEVELS,
+  calculatePayroll, formatVND, makeBlankEmployee, EMPLOYEE_LEVELS, computeLevelDefaults,
   type EmployeeInput, type PayrollConfig, type Region, type ContractType, type EmployeeLevel,
 } from "@/lib/payroll";
 import {
@@ -133,8 +133,35 @@ export function SingleCalculator({ config }: Props) {
       if (key === "totalWorkingDays") {
         next.lunchAllowance = Math.max(0, Number(value) || 0) * config.lunchPerDay;
       }
+      // Auto-fill phụ cấp khi đổi Cấp nhân sự (chỉ 1 lần khi đổi cấp).
+      // Sau khi fill, user có thể chỉnh tay từng ô; engine không cộng auto nữa.
+      if (key === "level" && value) {
+        const d = computeLevelDefaults(next, config);
+        next.transportationAllowance = d.transportation;
+        next.fixedPhoneAllowance = d.phone;
+        next.attendanceBonus = d.attendance;
+        next.housingNonTaxable = d.housing;
+        next.performanceBonus = d.performanceBonus;
+      }
       return next;
     });
+
+  // Áp dụng lại theo cấp (nút bấm) — tính lại Bonus dựa trên các ô hiện tại
+  const reapplyLevelDefaults = () => {
+    setEmp((p) => {
+      if (!p.level) return p;
+      const d = computeLevelDefaults(p, config);
+      return {
+        ...p,
+        transportationAllowance: d.transportation,
+        fixedPhoneAllowance: d.phone,
+        attendanceBonus: d.attendance,
+        housingNonTaxable: d.housing,
+        performanceBonus: d.performanceBonus,
+      };
+    });
+    toast.success("Đã áp dụng lại phụ cấp theo cấp");
+  };
 
   // Đồng bộ lunch khi đơn giá trong config thay đổi
   useEffect(() => {
@@ -346,20 +373,27 @@ export function SingleCalculator({ config }: Props) {
           </div>
         </SectionCard>
 
-        {/* Auto allowances theo cấp */}
+        {/* Áp dụng lại phụ cấp theo cấp */}
         <SectionCard
           icon={<Sparkles className="h-4 w-4 text-accent-foreground" />}
           title="Phụ cấp tự động theo cấp"
-          subtitle={emp.level ? `Áp dụng cho cấp "${emp.level}" (cộng thêm vào các phụ cấp thủ công ở 3a/3b)` : "Chọn cấp ở Nhóm 1 để bật tự động"}
+          subtitle={emp.level
+            ? `Đã fill vào các ô ở 3a/3b khi chọn cấp "${emp.level}". Bạn có thể chỉnh tay từng ô — bấm nút dưới để fill lại theo công thức.`
+            : "Chọn cấp ở Nhóm 1 để hệ thống tự fill phụ cấp."}
         >
           {emp.level ? (
-            <div className="space-y-1.5 text-sm">
-              <Row label={`Xăng xe ${config.taxableFlags.transportation ? "(chịu thuế)" : "(miễn thuế)"}`} value={result.autoAllowances.transportation} muted />
-              <Row label={`Điện thoại ${config.taxableFlags.phone ? "(chịu thuế)" : "(miễn thuế)"}`} value={result.autoAllowances.phone} muted />
-              <Row label={`Chuyên cần ${(config.attendanceRatio * 100).toFixed(0)}% ${config.taxableFlags.attendance ? "(chịu thuế)" : "(miễn thuế)"}`} value={result.autoAllowances.attendance} muted />
-              <Row label={`Housing ${(config.housingRatio * 100).toFixed(0)}% ${config.taxableFlags.housing ? "(chịu thuế)" : "(cap 15%)"}`} value={result.autoAllowances.housing} muted />
-              <Separator className="my-2" />
-              <Row label={`Bonus = Gross × (${emp.totalWorkingDays}/${result.standardWorkingDays}) − tổng trên`} value={result.autoAllowances.bonus} bold tone={result.autoAllowances.bonus < 0 ? "destructive" : "primary"} />
+            <div className="space-y-3">
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div>• Xăng xe → ô <em>Transportation</em> ({config.taxableFlags.transportation ? "chịu thuế" : "miễn thuế"})</div>
+                <div>• Điện thoại → ô <em>Fixed Phone Allowance</em></div>
+                <div>• Chuyên cần {(config.attendanceRatio * 100).toFixed(0)}% × Contract → ô <em>Attendance</em></div>
+                <div>• Housing {(config.housingRatio * 100).toFixed(0)}% × Contract → ô <em>Housing (≤15%)</em></div>
+                <div>• Bonus = Gross × ({emp.totalWorkingDays}/{emp.standardWorkingDays ?? config.standardWorkingDays}) − tổng các phụ cấp khác (trừ Lunch) → ô <em>Performance Bonus</em></div>
+              </div>
+              <Button onClick={reapplyLevelDefaults} variant="outline" size="sm" className="w-full">
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
+                Áp dụng lại theo cấp "{emp.level}"
+              </Button>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">Chưa chọn cấp — không có phụ cấp tự động.</p>

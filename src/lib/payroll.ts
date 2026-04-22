@@ -46,8 +46,8 @@ export interface PayrollConfig {
 
   // === Mới: Phụ cấp tự động theo cấp nhân sự ===
   levelAllowances: Record<EmployeeLevel, LevelAllowanceRow>;
-  attendanceRatio: number; // Chuyên cần = % Agreed Gross
-  housingRatio: number;    // Housing = % Agreed Gross
+  attendanceRatio: number; // Chuyên cần = % Contracted Salary
+  housingRatio: number;    // Housing = % Contracted Salary
 
   // Cờ chịu thuế cho từng khoản phụ cấp tự động
   taxableFlags: {
@@ -239,18 +239,36 @@ export function makeBlankEmployee(id: string, region: Region = 1): EmployeeInput
   };
 }
 
-/** Tính các phụ cấp tự động theo cấp + Agreed Gross + ngày công.
- *  Bonus = AgreedGross * (công/công chuẩn) - (transport + phone + attendance + housing).
- *  Bonus có thể âm. Lunch KHÔNG nằm trong công thức bonus. */
-export function computeAutoAllowances(emp: EmployeeInput, cfg: PayrollConfig): AutoAllowances {
+/** Gợi ý phụ cấp theo cấp nhân sự — dùng để AUTO-FILL vào các ô input.
+ *  Sau khi fill, các giá trị này được lưu trong EmployeeInput và user có thể
+ *  chỉnh tay. Engine `calculatePayroll` chỉ đọc từ field thủ công, KHÔNG
+ *  cộng thêm "auto" để tránh double count.
+ *
+ *  - Xăng / Điện thoại : theo bảng cấp.
+ *  - Chuyên cần (Attendance) = Contract Salary × attendanceRatio.
+ *  - Housing                 = Contract Salary × housingRatio.
+ *  - Performance Bonus       = Agreed Gross × (công/công chuẩn)
+ *                              − TỔNG mọi phụ cấp khác (trừ Lunch).
+ *    => trừ: transportation + phone + attendance + housing
+ *           + uniform + OT + housingTaxable + otherTaxable.
+ *    Bonus có thể âm. */
+export interface LevelDefaults {
+  transportation: number;
+  phone: number;
+  attendance: number;
+  housing: number;
+  performanceBonus: number;
+}
+
+export function computeLevelDefaults(emp: EmployeeInput, cfg: PayrollConfig): LevelDefaults {
   if (!emp.level) {
-    return { transportation: 0, phone: 0, attendance: 0, housing: 0, bonus: 0, totalNonLunchAuto: 0 };
+    return { transportation: 0, phone: 0, attendance: 0, housing: 0, performanceBonus: 0 };
   }
   const row = cfg.levelAllowances[emp.level];
-  const transportation = row?.transportation ?? 0;
-  const phone = row?.phone ?? 0;
-  const attendance = emp.agreedGrossSalary * cfg.attendanceRatio;
-  const housing = emp.agreedGrossSalary * cfg.housingRatio;
+  const transportation = Math.round(row?.transportation ?? 0);
+  const phone = Math.round(row?.phone ?? 0);
+  const attendance = Math.round(emp.contractSalary * cfg.attendanceRatio);
+  const housing = Math.round(emp.contractSalary * cfg.housingRatio);
 
   const standardDays = emp.standardWorkingDays && emp.standardWorkingDays > 0
     ? emp.standardWorkingDays
@@ -258,17 +276,21 @@ export function computeAutoAllowances(emp: EmployeeInput, cfg: PayrollConfig): A
   const ratio = standardDays > 0 ? emp.totalWorkingDays / standardDays : 0;
   const targetGross = emp.agreedGrossSalary * ratio;
 
-  const sumOthers = transportation + phone + attendance + housing;
-  const bonus = targetGross - sumOthers; // có thể âm
+  // Trừ TẤT CẢ phụ cấp khác — ngoại trừ Lunch
+  const sumOthers =
+    transportation + phone + attendance + housing +
+    (emp.uniformAllowance || 0) +
+    (emp.otTaxable || 0) +
+    (emp.housingTaxable || 0) +
+    (emp.otherTaxable || 0);
+  const performanceBonus = Math.round(targetGross - sumOthers);
 
-  return {
-    transportation,
-    phone,
-    attendance,
-    housing,
-    bonus,
-    totalNonLunchAuto: transportation + phone + attendance + housing + bonus,
-  };
+  return { transportation, phone, attendance, housing, performanceBonus };
+}
+
+/** @deprecated Engine không còn cộng auto. Giữ stub để export tương thích. */
+export function computeAutoAllowances(_emp: EmployeeInput, _cfg: PayrollConfig): AutoAllowances {
+  return { transportation: 0, phone: 0, attendance: 0, housing: 0, bonus: 0, totalNonLunchAuto: 0 };
 }
 
 export function calculatePayroll(emp: EmployeeInput, cfg: PayrollConfig = DEFAULT_CONFIG): PayrollResult {

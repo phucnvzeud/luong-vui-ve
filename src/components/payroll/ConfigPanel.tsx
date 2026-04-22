@@ -170,11 +170,11 @@ export function ConfigPanel({ config, setConfig }: Props) {
           ))}
         </Section>
 
-        <Section title="Tỷ lệ phụ cấp theo Agreed Gross & cờ chịu thuế">
-          <PctRow label="Chuyên cần (% Gross)" value={config.attendanceRatio} onChange={(v) => update({ attendanceRatio: v })} />
-          <PctRow label="Housing (% Gross)" value={config.housingRatio} onChange={(v) => update({ housingRatio: v })} />
+        <Section title="Tỷ lệ phụ cấp theo Contracted Salary & cờ chịu thuế">
+          <PctRow label="Chuyên cần (% Contracted Salary)" value={config.attendanceRatio} onChange={(v) => update({ attendanceRatio: v })} />
+          <PctRow label="Housing (% Contracted Salary)" value={config.housingRatio} onChange={(v) => update({ housingRatio: v })} />
           <p className="text-[11px] text-muted-foreground pt-1">
-            Bonus = Agreed Gross × (công/công chuẩn) − (Xăng + ĐT + Chuyên cần + Housing). Lunch không trừ vào Bonus. Bonus có thể âm.
+            Chuyên cần & Housing tính trên Contracted Salary (lương HĐ). Bonus = Agreed Gross × (công/công chuẩn) − (Xăng + ĐT + Chuyên cần + Housing). Lunch không trừ vào Bonus. Bonus có thể âm.
           </p>
           <Separator className="my-1" />
           <FlagRow label="Xăng xe chịu thuế" value={config.taxableFlags.transportation}
