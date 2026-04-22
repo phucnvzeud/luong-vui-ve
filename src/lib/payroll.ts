@@ -295,7 +295,7 @@ export function calculatePayroll(emp: EmployeeInput, cfg: PayrollConfig = DEFAUL
       performance: emp.performanceBonus,
       housing: emp.housingTaxable + housingExcessTaxable,
       ot: emp.otTaxable,
-      other: emp.otherTaxable + lunchTaxableExcess,
+      other: emp.otherTaxable,
     },
 
     grossIncome,
