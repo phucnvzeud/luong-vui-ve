@@ -140,10 +140,16 @@ function NumRow({ label, value, onChange, suffix, small }: { label: string; valu
       <div className="col-span-6 flex items-center gap-1">
         <Input
           className="h-8 text-xs font-mono text-right"
+          inputMode={small ? "decimal" : "numeric"}
           value={small ? value : value.toLocaleString("vi-VN")}
           onChange={(e) => {
-            const raw = e.target.value.replace(/[^\d]/g, "");
-            onChange(raw ? Number(raw) : 0);
+            if (small) {
+              const raw = e.target.value.replace(/[^\d.]/g, "");
+              onChange(raw ? Number(raw) : 0);
+            } else {
+              const raw = e.target.value.replace(/[^\d]/g, "");
+              onChange(raw ? Number(raw) : 0);
+            }
           }}
         />
         {suffix && <span className="text-xs text-muted-foreground w-3">{suffix}</span>}
