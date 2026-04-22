@@ -124,8 +124,81 @@ export function ConfigPanel({ config, setConfig }: Props) {
             ))}
           </div>
         </Section>
+
+        <Section title="Phụ cấp tự động theo cấp nhân sự">
+          <div className="grid grid-cols-12 gap-2 items-center text-[11px] uppercase tracking-wider text-muted-foreground">
+            <span className="col-span-4">Cấp</span>
+            <span className="col-span-4 text-right">Xăng xe (₫)</span>
+            <span className="col-span-4 text-right">Điện thoại (₫)</span>
+          </div>
+          {EMPLOYEE_LEVELS.map((lvl) => (
+            <div key={lvl} className="grid grid-cols-12 gap-2 items-center">
+              <Label className="col-span-4 text-xs">{lvl}</Label>
+              <div className="col-span-4">
+                <Input
+                  className="h-8 text-xs font-mono text-right"
+                  inputMode="numeric"
+                  value={config.levelAllowances[lvl].transportation.toLocaleString("vi-VN")}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^\d]/g, "");
+                    update({
+                      levelAllowances: {
+                        ...config.levelAllowances,
+                        [lvl]: { ...config.levelAllowances[lvl], transportation: raw ? Number(raw) : 0 },
+                      },
+                    });
+                  }}
+                />
+              </div>
+              <div className="col-span-4">
+                <Input
+                  className="h-8 text-xs font-mono text-right"
+                  inputMode="numeric"
+                  value={config.levelAllowances[lvl].phone.toLocaleString("vi-VN")}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^\d]/g, "");
+                    update({
+                      levelAllowances: {
+                        ...config.levelAllowances,
+                        [lvl]: { ...config.levelAllowances[lvl], phone: raw ? Number(raw) : 0 },
+                      },
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </Section>
+
+        <Section title="Tỷ lệ phụ cấp theo Agreed Gross & cờ chịu thuế">
+          <PctRow label="Chuyên cần (% Gross)" value={config.attendanceRatio} onChange={(v) => update({ attendanceRatio: v })} />
+          <PctRow label="Housing (% Gross)" value={config.housingRatio} onChange={(v) => update({ housingRatio: v })} />
+          <p className="text-[11px] text-muted-foreground pt-1">
+            Bonus = Agreed Gross × (công/công chuẩn) − (Xăng + ĐT + Chuyên cần + Housing). Lunch không trừ vào Bonus. Bonus có thể âm.
+          </p>
+          <Separator className="my-1" />
+          <FlagRow label="Xăng xe chịu thuế" value={config.taxableFlags.transportation}
+            onChange={(v) => update({ taxableFlags: { ...config.taxableFlags, transportation: v } })} />
+          <FlagRow label="Điện thoại chịu thuế" value={config.taxableFlags.phone}
+            onChange={(v) => update({ taxableFlags: { ...config.taxableFlags, phone: v } })} />
+          <FlagRow label="Chuyên cần chịu thuế" value={config.taxableFlags.attendance}
+            onChange={(v) => update({ taxableFlags: { ...config.taxableFlags, attendance: v } })} />
+          <FlagRow label="Housing chịu thuế (tắt = áp cap 15%)" value={config.taxableFlags.housing}
+            onChange={(v) => update({ taxableFlags: { ...config.taxableFlags, housing: v } })} />
+          <FlagRow label="Bonus chịu thuế" value={config.taxableFlags.bonus}
+            onChange={(v) => update({ taxableFlags: { ...config.taxableFlags, bonus: v } })} />
+        </Section>
       </div>
     </Card>
+  );
+}
+
+function FlagRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between py-1">
+      <Label className="text-xs">{label}</Label>
+      <Switch checked={value} onCheckedChange={onChange} />
+    </div>
   );
 }
 
