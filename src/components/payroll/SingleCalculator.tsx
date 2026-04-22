@@ -12,13 +12,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  calculatePayroll, formatVND, makeBlankEmployee,
-  type EmployeeInput, type PayrollConfig, type Region, type ContractType,
+  calculatePayroll, formatVND, makeBlankEmployee, EMPLOYEE_LEVELS,
+  type EmployeeInput, type PayrollConfig, type Region, type ContractType, type EmployeeLevel,
 } from "@/lib/payroll";
 import {
   ArrowRight, Wallet, Receipt, Building2, TrendingDown,
   Briefcase, CalendarDays, Gift, ShieldCheck, Users, PiggyBank,
-  Save, FolderOpen, Trash2, FilePlus2,
+  Save, FolderOpen, Trash2, FilePlus2, Sparkles,
 } from "lucide-react";
 
 interface Props { config: PayrollConfig; }
