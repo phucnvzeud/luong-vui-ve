@@ -282,7 +282,6 @@ export function SingleCalculator({ config }: Props) {
             <Field label="Lunch Allowance" hint="Toàn bộ miễn thuế">
               <NumInput value={emp.lunchAllowance} onChange={(v) => update("lunchAllowance", v)} />
             </Field>
-            </Field>
             <Field label="Uniform">
               <NumInput value={emp.uniformAllowance} onChange={(v) => update("uniformAllowance", v)} />
             </Field>
