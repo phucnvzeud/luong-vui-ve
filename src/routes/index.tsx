@@ -5,7 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { SingleCalculator } from "@/components/payroll/SingleCalculator";
 import { BulkPayroll } from "@/components/payroll/BulkPayroll";
 import { ConfigPanel, CONFIG_STORAGE_KEY } from "@/components/payroll/ConfigPanel";
+import { ProfileBar } from "@/components/payroll/ProfileBar";
 import { DEFAULT_CONFIG, type PayrollConfig } from "@/lib/payroll";
+import {
+  loadProfiles, saveProfiles, getLastProfileId, setLastProfileId,
+  mergeConfig, makeId, type ConfigProfile,
+} from "@/lib/profiles";
 import { Calculator, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -20,35 +25,71 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const [config, setConfig] = useState<PayrollConfig>(DEFAULT_CONFIG);
+  const [profiles, setProfilesState] = useState<ConfigProfile[]>([]);
+  const [activeId, setActiveIdState] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  // Load saved config from localStorage on mount
+  // Hydrate từ localStorage
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setConfig({ ...DEFAULT_CONFIG, ...parsed });
-      }
-    } catch {
-      /* ignore */
+    const list = loadProfiles();
+    let nextProfiles = list;
+    let nextActive: string | null = null;
+    let nextConfig: PayrollConfig = DEFAULT_CONFIG;
+
+    // Migration: nếu chưa có profile nào nhưng có config cũ → tạo profile "Mặc định"
+    if (list.length === 0) {
+      let legacy: PayrollConfig | null = null;
+      try {
+        const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+        if (raw) legacy = mergeConfig(JSON.parse(raw));
+      } catch { /* ignore */ }
+      const seedConfig = legacy ?? DEFAULT_CONFIG;
+      const seed: ConfigProfile = {
+        id: makeId(),
+        name: "Mặc định",
+        config: seedConfig,
+        updatedAt: Date.now(),
+      };
+      nextProfiles = [seed];
+      nextActive = seed.id;
+      nextConfig = seedConfig;
+      saveProfiles(nextProfiles);
+      setLastProfileId(seed.id);
+    } else {
+      const lastId = getLastProfileId();
+      const found = list.find((p) => p.id === lastId) ?? list[0];
+      nextActive = found.id;
+      nextConfig = found.config;
     }
+
+    setProfilesState(nextProfiles);
+    setActiveIdState(nextActive);
+    setConfig(nextConfig);
     setHydrated(true);
   }, []);
 
-  // Auto-persist config when it changes (after hydration)
+  // Persist profiles list
+  const setProfiles = (list: ConfigProfile[]) => {
+    setProfilesState(list);
+    saveProfiles(list);
+  };
+  const setActiveId = (id: string | null) => {
+    setActiveIdState(id);
+    setLastProfileId(id);
+  };
+
+  // Auto-save config thay đổi vào profile đang active
   useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
-    } catch {
-      /* ignore */
-    }
-  }, [config, hydrated]);
+    if (!hydrated || !activeId) return;
+    setProfilesState((prev) => {
+      const next = prev.map((p) => p.id === activeId ? { ...p, config, updatedAt: Date.now() } : p);
+      saveProfiles(next);
+      return next;
+    });
+  }, [config, activeId, hydrated]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="bg-hero text-primary-foreground relative overflow-hidden">
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-0 right-1/4 h-72 w-72 rounded-full bg-accent/40 blur-3xl" />
@@ -69,7 +110,7 @@ function Index() {
             Tính lương <span className="text-accent">Net / Gross</span> cho doanh nghiệp Việt Nam
           </h1>
           <p className="mt-3 text-primary-foreground/80 max-w-2xl text-sm md:text-base">
-            BHXH · BHYT · BHTN · Thuế TNCN lũy tiến · Giảm trừ gia cảnh · Bảng lương nhiều nhân viên · Export Excel · Tùy chỉnh từng công thức.
+            BHXH · BHYT · BHTN · Thuế TNCN lũy tiến · Phụ cấp tự động theo cấp · Profile cấu hình · Export Excel.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-2">
@@ -83,6 +124,15 @@ function Index() {
       </header>
 
       <main className="max-w-7xl mx-auto px-5 md:px-8 py-8 md:py-10">
+        <ProfileBar
+          profiles={profiles}
+          setProfiles={setProfiles}
+          activeId={activeId}
+          setActiveId={setActiveId}
+          config={config}
+          setConfig={setConfig}
+        />
+
         <Tabs defaultValue="single" className="w-full">
           <TabsList className="bg-muted/60 mb-6">
             <TabsTrigger value="single">Tính 1 nhân viên</TabsTrigger>
