@@ -228,6 +228,18 @@ export function SingleCalculator({ config }: Props) {
                 </SelectContent>
               </Select>
             </Field>
+            <Field label="Cấp nhân sự" hint="Quyết định mức xăng/ĐT/chuyên cần/housing tự động">
+              <Select
+                value={emp.level ?? "__none__"}
+                onValueChange={(v) => update("level", v === "__none__" ? undefined : (v as EmployeeLevel))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Không tự động —</SelectItem>
+                  {EMPLOYEE_LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Vùng lương tối thiểu">
               <Select value={String(emp.region)} onValueChange={(v) => update("region", Number(v) as Region)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
