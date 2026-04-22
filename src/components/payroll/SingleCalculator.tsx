@@ -12,13 +12,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  calculatePayroll, formatVND, makeBlankEmployee,
-  type EmployeeInput, type PayrollConfig, type Region, type ContractType,
+  calculatePayroll, formatVND, makeBlankEmployee, EMPLOYEE_LEVELS,
+  type EmployeeInput, type PayrollConfig, type Region, type ContractType, type EmployeeLevel,
 } from "@/lib/payroll";
 import {
   ArrowRight, Wallet, Receipt, Building2, TrendingDown,
   Briefcase, CalendarDays, Gift, ShieldCheck, Users, PiggyBank,
-  Save, FolderOpen, Trash2, FilePlus2,
+  Save, FolderOpen, Trash2, FilePlus2, Sparkles,
 } from "lucide-react";
 
 interface Props { config: PayrollConfig; }
@@ -228,6 +228,18 @@ export function SingleCalculator({ config }: Props) {
                 </SelectContent>
               </Select>
             </Field>
+            <Field label="Cấp nhân sự" hint="Quyết định mức xăng/ĐT/chuyên cần/housing tự động">
+              <Select
+                value={emp.level ?? "__none__"}
+                onValueChange={(v) => update("level", v === "__none__" ? undefined : (v as EmployeeLevel))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Không tự động —</SelectItem>
+                  {EMPLOYEE_LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="Vùng lương tối thiểu">
               <Select value={String(emp.region)} onValueChange={(v) => update("region", Number(v) as Region)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -332,6 +344,26 @@ export function SingleCalculator({ config }: Props) {
               <NumInput value={emp.otherTaxable} onChange={(v) => update("otherTaxable", v)} />
             </Field>
           </div>
+        </SectionCard>
+
+        {/* Auto allowances theo cấp */}
+        <SectionCard
+          icon={<Sparkles className="h-4 w-4 text-accent-foreground" />}
+          title="Phụ cấp tự động theo cấp"
+          subtitle={emp.level ? `Áp dụng cho cấp "${emp.level}" (cộng thêm vào các phụ cấp thủ công ở 3a/3b)` : "Chọn cấp ở Nhóm 1 để bật tự động"}
+        >
+          {emp.level ? (
+            <div className="space-y-1.5 text-sm">
+              <Row label={`Xăng xe ${config.taxableFlags.transportation ? "(chịu thuế)" : "(miễn thuế)"}`} value={result.autoAllowances.transportation} muted />
+              <Row label={`Điện thoại ${config.taxableFlags.phone ? "(chịu thuế)" : "(miễn thuế)"}`} value={result.autoAllowances.phone} muted />
+              <Row label={`Chuyên cần ${(config.attendanceRatio * 100).toFixed(0)}% ${config.taxableFlags.attendance ? "(chịu thuế)" : "(miễn thuế)"}`} value={result.autoAllowances.attendance} muted />
+              <Row label={`Housing ${(config.housingRatio * 100).toFixed(0)}% ${config.taxableFlags.housing ? "(chịu thuế)" : "(cap 15%)"}`} value={result.autoAllowances.housing} muted />
+              <Separator className="my-2" />
+              <Row label={`Bonus = Gross × (${emp.totalWorkingDays}/${result.standardWorkingDays}) − tổng trên`} value={result.autoAllowances.bonus} bold tone={result.autoAllowances.bonus < 0 ? "destructive" : "primary"} />
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Chưa chọn cấp — không có phụ cấp tự động.</p>
+          )}
         </SectionCard>
 
         {/* Nhóm 6 + 7 input */}

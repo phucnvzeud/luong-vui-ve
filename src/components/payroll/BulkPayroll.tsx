@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  calculatePayroll, formatNumber, makeBlankEmployee,
-  type EmployeeInput, type PayrollConfig, type Region,
+  calculatePayroll, formatNumber, makeBlankEmployee, EMPLOYEE_LEVELS,
+  type EmployeeInput, type PayrollConfig, type Region, type EmployeeLevel,
 } from "@/lib/payroll";
 import { Plus, Trash2, FileSpreadsheet, Users2 } from "lucide-react";
 
@@ -16,26 +16,28 @@ const samples: EmployeeInput[] = [
   {
     ...makeBlankEmployee("1", 1),
     employeeCode: "0001", name: "Nguyễn Văn A", position: "Trưởng phòng", department: "Kinh doanh",
+    level: "Quản lý",
     agreedGrossSalary: 37_200_000, salaryAppliedRatio: 1, contractSalary: 37_200_000, insuranceSalary: 37_200_000,
-    totalWorkingDays: 26,
-    lunchAllowance: 730_000, fixedPhoneAllowance: 170_000,
-    transportationAllowance: 1_500_000, attendanceBonus: 500_000, performanceBonus: 20_000_000, otTaxable: 1_900_000,
+    totalWorkingDays: 22,
+    lunchAllowance: 1_100_000,
     dependents: 2,
   },
   {
     ...makeBlankEmployee("2", 1),
     employeeCode: "0002", name: "Trần Thị B", position: "Nhân viên", department: "Kế toán",
+    level: "Chuyên viên",
     agreedGrossSalary: 18_000_000, salaryAppliedRatio: 1, contractSalary: 18_000_000, insuranceSalary: 18_000_000,
-    totalWorkingDays: 26,
-    lunchAllowance: 730_000, transportationAllowance: 500_000, attendanceBonus: 300_000,
+    totalWorkingDays: 22,
+    lunchAllowance: 1_100_000,
     dependents: 1,
   },
   {
     ...makeBlankEmployee("3", 1),
     employeeCode: "0003", name: "Lê Văn C", position: "Thực tập", department: "IT",
+    level: "Khác",
     agreedGrossSalary: 8_000_000, salaryAppliedRatio: 0.85, contractSalary: 8_000_000, insuranceSalary: 8_000_000,
-    totalWorkingDays: 24,
-    lunchAllowance: 500_000,
+    totalWorkingDays: 20,
+    lunchAllowance: 1_000_000,
   },
 ];
 
@@ -74,6 +76,7 @@ export function BulkPayroll({ config }: Props) {
       "Họ tên": emp.name,
       "Chức vụ": emp.position ?? "",
       "Phòng ban": emp.department ?? "",
+      "Cấp NS": emp.level ?? "",
       "Loại HĐ": emp.contractType ?? "",
       "Agreed Gross": Math.round(emp.agreedGrossSalary),
       "Salary Applied %": Math.round((emp.salaryAppliedRatio ?? 0) * 100),
@@ -93,6 +96,7 @@ export function BulkPayroll({ config }: Props) {
       "Housing (T)": Math.round(res.taxableBreakdown.housing),
       "OT": Math.round(res.taxableBreakdown.ot),
       "Khác (T)": Math.round(res.taxableBreakdown.other),
+      "Bonus (auto)": Math.round(res.autoAllowances.bonus),
       "Total Taxable Benefits": Math.round(res.totalTaxableBenefits),
       "Gross Income": Math.round(res.grossIncome),
       "Taxable Income": Math.round(res.taxableIncomeGross),
@@ -155,7 +159,7 @@ export function BulkPayroll({ config }: Props) {
           <thead>
             <tr className="text-xs text-muted-foreground">
               {[
-                "#", "Mã NV", "Họ tên", "Chức vụ", "Contract Salary", "Lương BH",
+                "#", "Mã NV", "Họ tên", "Cấp", "Chức vụ", "Contract Salary", "Lương BH",
                 "Công", "Lunch", "Phone", "Transport", "Performance", "OT",
                 "NPT", "Vùng", "Gross Income", "BH (NLĐ)", "PIT", "Net Take-home", "Cost DN", "",
               ].map((h, i) => (
@@ -169,6 +173,18 @@ export function BulkPayroll({ config }: Props) {
                 <td className="py-2 px-2 border-b border-border/50 text-muted-foreground text-xs">{i + 1}</td>
                 <CellText value={emp.employeeCode ?? ""} onChange={(v) => update(emp.id, "employeeCode", v)} w="min-w-[80px]" />
                 <CellText value={emp.name} onChange={(v) => update(emp.id, "name", v)} w="min-w-[160px]" />
+                <td className="py-1 px-1 border-b border-border/50 w-[120px]">
+                  <Select
+                    value={emp.level ?? "__none__"}
+                    onValueChange={(v) => update(emp.id, "level", v === "__none__" ? undefined : (v as EmployeeLevel))}
+                  >
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">—</SelectItem>
+                      {EMPLOYEE_LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </td>
                 <CellText value={emp.position ?? ""} onChange={(v) => update(emp.id, "position", v)} w="min-w-[130px]" />
                 <CellNum value={emp.contractSalary} onChange={(v) => update(emp.id, "contractSalary", v)} />
                 <CellNum value={emp.insuranceSalary} onChange={(v) => update(emp.id, "insuranceSalary", v)} />
@@ -203,7 +219,7 @@ export function BulkPayroll({ config }: Props) {
               </tr>
             ))}
             <tr className="bg-primary/5 font-semibold">
-              <td colSpan={14} className="py-3 px-2 text-sm">TỔNG CỘNG ({rows.length} NV)</td>
+              <td colSpan={15} className="py-3 px-2 text-sm">TỔNG CỘNG ({rows.length} NV)</td>
               <NumOut value={totals.gross} />
               <NumOut value={totals.ins} className="text-destructive" />
               <NumOut value={totals.pit} className="text-warning-foreground" />

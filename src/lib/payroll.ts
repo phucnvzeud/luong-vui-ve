@@ -10,6 +10,14 @@
 
 export type Region = 1 | 2 | 3 | 4;
 export type ContractType = "Chính thức" | "Thử việc" | "Thời vụ" | "Cộng tác viên";
+export type EmployeeLevel = "Lãnh đạo" | "Quản lý" | "Chuyên viên" | "Khác";
+
+export const EMPLOYEE_LEVELS: EmployeeLevel[] = ["Lãnh đạo", "Quản lý", "Chuyên viên", "Khác"];
+
+export interface LevelAllowanceRow {
+  transportation: number; // Xăng xe (VND/tháng)
+  phone: number;          // Điện thoại (VND/tháng)
+}
 
 export interface PayrollConfig {
   // BH - NLĐ (10.5%)
@@ -20,21 +28,35 @@ export interface PayrollConfig {
   bhxhErRate: number;
   bhytErRate: number;
   bhtnErRate: number;
-  tnldErRate: number; // Tai nạn lao động - Bệnh nghề nghiệp
+  tnldErRate: number;
   // Trần đóng BH
-  baseSalary: number; // mức lương cơ sở
-  bhxhCapMultiplier: number; // 20x lương cơ sở cho BHXH/BHYT
-  regionMinWages: Record<Region, number>; // 20x lương tối thiểu vùng cho BHTN
+  baseSalary: number;
+  bhxhCapMultiplier: number;
+  regionMinWages: Record<Region, number>;
   // PIT
   personalDeduction: number;
   dependentDeduction: number;
   taxBrackets: { upTo: number | null; rate: number }[];
-  // Công chuẩn & phụ cấp giới hạn
-  standardWorkingDays: number; // công chuẩn / tháng (mặc định 22)
-  lunchAllowanceCap: number; // ăn trưa miễn thuế tối đa (730k/tháng)
-  lunchPerDay: number; // đơn giá ăn trưa / ngày công (mặc định 50.000đ)
-  housingNonTaxableRatio: number; // tối đa 15% TN chịu thuế (không gồm chính housing)
+  // Công chuẩn & lunch
+  standardWorkingDays: number;
+  lunchAllowanceCap: number;
+  lunchPerDay: number;
+  housingNonTaxableRatio: number;
   defaultRegion: Region;
+
+  // === Mới: Phụ cấp tự động theo cấp nhân sự ===
+  levelAllowances: Record<EmployeeLevel, LevelAllowanceRow>;
+  attendanceRatio: number; // Chuyên cần = % Agreed Gross
+  housingRatio: number;    // Housing = % Agreed Gross
+
+  // Cờ chịu thuế cho từng khoản phụ cấp tự động
+  taxableFlags: {
+    transportation: boolean;
+    phone: boolean;
+    attendance: boolean;
+    housing: boolean;
+    bonus: boolean;
+  };
 }
 
 export const DEFAULT_CONFIG: PayrollConfig = {
@@ -67,63 +89,83 @@ export const DEFAULT_CONFIG: PayrollConfig = {
   lunchPerDay: 50_000,
   housingNonTaxableRatio: 0.15,
   defaultRegion: 1,
+
+  levelAllowances: {
+    "Lãnh đạo":   { transportation: 3_000_000, phone: 2_000_000 },
+    "Quản lý":    { transportation: 2_000_000, phone: 1_000_000 },
+    "Chuyên viên":{ transportation: 1_000_000, phone:   500_000 },
+    "Khác":       { transportation:   500_000, phone:         0 },
+  },
+  attendanceRatio: 0.15,
+  housingRatio: 0.10,
+
+  taxableFlags: {
+    transportation: true,
+    phone: false,
+    attendance: true,
+    housing: false, // sẽ áp dụng cap 15% nếu không chịu thuế
+    bonus: true,
+  },
 };
 
 export interface EmployeeInput {
-  // Nhóm 1 — Thông tin nhân sự
+  // Nhóm 1
   id: string;
   employeeCode?: string;
   name: string;
   position?: string;
   department?: string;
   contractType?: ContractType;
+  level?: EmployeeLevel; // mới — null/undefined = không tự động phụ cấp
 
-  // Cơ sở lương
-  agreedGrossSalary: number;   // Dealed Gross Income
-  salaryAppliedRatio: number;  // % hưởng lương (1 = 100%)
-  contractSalary: number;      // Lương ký HĐLĐ
-  insuranceSalary: number;     // Lương đóng BHXH/BHYT/BHTN
+  agreedGrossSalary: number;
+  salaryAppliedRatio: number;
+  contractSalary: number;
+  insuranceSalary: number;
 
-  // Nhóm 2 — Công
+  // Nhóm 2
   totalWorkingDays: number;
-  standardWorkingDays?: number; // override công chuẩn nếu cần
+  standardWorkingDays?: number;
 
-  // Nhóm 3 — Phụ cấp không tính thuế
+  // Nhóm 3 — manual (vẫn giữ để override / thêm)
   lunchAllowance: number;
   uniformAllowance: number;
-  fixedPhoneAllowance: number;
-  housingNonTaxable: number;
-
-  // Nhóm 3 — Phụ cấp tính thuế
-  transportationAllowance: number;
-  attendanceBonus: number;
-  performanceBonus: number;
+  fixedPhoneAllowance: number;   // = 0 nếu dùng auto theo level
+  housingNonTaxable: number;     // = 0 nếu dùng auto
+  transportationAllowance: number; // = 0 nếu dùng auto
+  attendanceBonus: number;       // = 0 nếu dùng auto
+  performanceBonus: number;      // bonus thủ công bổ sung
   housingTaxable: number;
   otTaxable: number;
   otherTaxable: number;
 
-  // Nhóm 6 — NPT
+  // Nhóm 6
   dependents: number;
-
-  // Nhóm 7 — Bổ sung / khấu trừ khác
+  // Nhóm 7
   additions: number;
   otherDeductions: number;
 
   region: Region;
 }
 
+export interface AutoAllowances {
+  transportation: number;
+  phone: number;
+  attendance: number;
+  housing: number;
+  bonus: number;
+  totalNonLunchAuto: number; // tổng các phụ cấp tự động (trừ lunch)
+}
+
 export interface PayrollResult {
-  // Nhóm 1
   agreedGrossSalary: number;
   contractSalary: number;
   insuranceSalary: number;
 
-  // Nhóm 2
   totalWorkingDays: number;
   standardWorkingDays: number;
   actualSalaryForWorkedDays: number;
 
-  // Nhóm 3
   totalNonTaxableBenefits: number;
   totalTaxableBenefits: number;
   nonTaxableBreakdown: { lunch: number; uniform: number; phone: number; housing: number };
@@ -134,13 +176,13 @@ export interface PayrollResult {
     housing: number;
     ot: number;
     other: number;
+    bonus: number;
   };
+  autoAllowances: AutoAllowances;
 
-  // Nhóm 4
-  grossIncome: number;          // Tổng thu nhập
-  taxableIncomeGross: number;   // Thu nhập chịu thuế (= Gross - NonTaxable)
+  grossIncome: number;
+  taxableIncomeGross: number;
 
-  // Nhóm 5
   cappedBhxhSalary: number;
   cappedBhtnSalary: number;
   bhxhEmp: number;
@@ -153,14 +195,12 @@ export interface PayrollResult {
   tnldEr: number;
   totalInsuranceEr: number;
 
-  // Nhóm 6
   personalDeduction: number;
   dependentDeduction: number;
-  taxableIncomeAfterDeductions: number; // TN tính thuế
+  taxableIncomeAfterDeductions: number;
   pit: number;
   pitBreakdown: { bracket: string; rate: number; amount: number; tax: number }[];
 
-  // Nhóm 7
   netAfterPIT: number;
   additions: number;
   otherDeductions: number;
@@ -176,6 +216,7 @@ export function makeBlankEmployee(id: string, region: Region = 1): EmployeeInput
     position: "",
     department: "",
     contractType: "Chính thức",
+    level: "Chuyên viên",
     agreedGrossSalary: 0,
     salaryAppliedRatio: 1,
     contractSalary: 0,
@@ -198,48 +239,107 @@ export function makeBlankEmployee(id: string, region: Region = 1): EmployeeInput
   };
 }
 
+/** Tính các phụ cấp tự động theo cấp + Agreed Gross + ngày công.
+ *  Bonus = AgreedGross * (công/công chuẩn) - (transport + phone + attendance + housing).
+ *  Bonus có thể âm. Lunch KHÔNG nằm trong công thức bonus. */
+export function computeAutoAllowances(emp: EmployeeInput, cfg: PayrollConfig): AutoAllowances {
+  if (!emp.level) {
+    return { transportation: 0, phone: 0, attendance: 0, housing: 0, bonus: 0, totalNonLunchAuto: 0 };
+  }
+  const row = cfg.levelAllowances[emp.level];
+  const transportation = row?.transportation ?? 0;
+  const phone = row?.phone ?? 0;
+  const attendance = emp.agreedGrossSalary * cfg.attendanceRatio;
+  const housing = emp.agreedGrossSalary * cfg.housingRatio;
+
+  const standardDays = emp.standardWorkingDays && emp.standardWorkingDays > 0
+    ? emp.standardWorkingDays
+    : cfg.standardWorkingDays;
+  const ratio = standardDays > 0 ? emp.totalWorkingDays / standardDays : 0;
+  const targetGross = emp.agreedGrossSalary * ratio;
+
+  const sumOthers = transportation + phone + attendance + housing;
+  const bonus = targetGross - sumOthers; // có thể âm
+
+  return {
+    transportation,
+    phone,
+    attendance,
+    housing,
+    bonus,
+    totalNonLunchAuto: transportation + phone + attendance + housing + bonus,
+  };
+}
+
 export function calculatePayroll(emp: EmployeeInput, cfg: PayrollConfig = DEFAULT_CONFIG): PayrollResult {
   const standardDays = emp.standardWorkingDays && emp.standardWorkingDays > 0
     ? emp.standardWorkingDays
     : cfg.standardWorkingDays;
 
-  // Nhóm 2 — Lương theo ngày công
+  // Nhóm 2 — Lương theo ngày công (vẫn dựa vào contract salary)
   const actualSalaryForWorkedDays = standardDays > 0
     ? (emp.contractSalary * emp.salaryAppliedRatio * emp.totalWorkingDays) / standardDays
     : 0;
 
-  // Nhóm 3 — Phụ cấp
-  // Ăn trưa: toàn bộ là phụ cấp không tính thuế (không áp dụng cap)
+  const auto = computeAutoAllowances(emp, cfg);
+  const flags = cfg.taxableFlags;
+
+  // Lunch: luôn không tính thuế
   const lunchNonTaxable = emp.lunchAllowance;
 
-  const nonTaxableBeforeHousing =
-    lunchNonTaxable + emp.uniformAllowance + emp.fixedPhoneAllowance;
+  // Tách auto theo cờ chịu thuế
+  const autoTransportNT = flags.transportation ? 0 : auto.transportation;
+  const autoTransportT  = flags.transportation ? auto.transportation : 0;
+  const autoPhoneNT     = flags.phone ? 0 : auto.phone;
+  const autoPhoneT      = flags.phone ? auto.phone : 0;
+  const autoAttendanceT = flags.attendance ? auto.attendance : 0;
+  const autoAttendanceNT= flags.attendance ? 0 : auto.attendance;
+  const autoBonusT      = flags.bonus ? auto.bonus : 0;
+  const autoBonusNT     = flags.bonus ? 0 : auto.bonus;
 
-  // Cơ sở để tính trần housing miễn thuế: TN chịu thuế tạm tính (chưa trừ housing)
+  // Housing auto: nếu cờ taxable bật => toàn bộ chịu thuế
+  // Ngược lại: áp cap 15% như housingNonTaxable thủ công
+  const housingAutoRequested = auto.housing;
+
+  // Manual non-taxable (trước housing)
+  const phoneManualNT = emp.fixedPhoneAllowance;
+  const transportManualNT = 0; // transport thủ công = chịu thuế (giữ logic cũ)
+
+  const nonTaxableBeforeHousing =
+    lunchNonTaxable +
+    emp.uniformAllowance +
+    phoneManualNT +
+    autoTransportNT + autoPhoneNT + autoAttendanceNT + autoBonusNT;
+
+  // Taxable (chưa gồm housing)
   const taxableBenefitsExHousing =
-    emp.transportationAllowance +
+    emp.transportationAllowance + transportManualNT + // transport thủ công
     emp.attendanceBonus +
     emp.performanceBonus +
     emp.otTaxable +
-    emp.otherTaxable;
+    emp.otherTaxable +
+    autoTransportT + autoPhoneT + autoAttendanceT + autoBonusT;
+
+  // Housing combo
+  const housingNonTaxableManualReq = emp.housingNonTaxable + (flags.housing ? 0 : housingAutoRequested);
+  const housingTaxableForced = emp.housingTaxable + (flags.housing ? housingAutoRequested : 0);
 
   const taxableBaseForHousingCap =
-    actualSalaryForWorkedDays + taxableBenefitsExHousing + emp.housingTaxable;
-
+    actualSalaryForWorkedDays + taxableBenefitsExHousing + housingTaxableForced;
   const housingCap = cfg.housingNonTaxableRatio * taxableBaseForHousingCap;
-  const housingNonTaxableEffective = Math.min(emp.housingNonTaxable, housingCap);
-  const housingExcessTaxable = Math.max(0, emp.housingNonTaxable - housingCap);
+  const housingNonTaxableEffective = Math.min(housingNonTaxableManualReq, housingCap);
+  const housingExcessTaxable = Math.max(0, housingNonTaxableManualReq - housingCap);
 
   const totalNonTaxableBenefits = nonTaxableBeforeHousing + housingNonTaxableEffective;
   const totalTaxableBenefits =
-    taxableBenefitsExHousing + emp.housingTaxable + housingExcessTaxable;
+    taxableBenefitsExHousing + housingTaxableForced + housingExcessTaxable;
 
-  // Nhóm 4 — Tổng thu nhập
+  // Nhóm 4
   const grossIncome =
     actualSalaryForWorkedDays + totalNonTaxableBenefits + totalTaxableBenefits;
   const taxableIncomeGross = grossIncome - totalNonTaxableBenefits;
 
-  // Nhóm 5 — Bảo hiểm
+  // Nhóm 5
   const bhxhCap = cfg.baseSalary * cfg.bhxhCapMultiplier;
   const bhtnCap = cfg.regionMinWages[emp.region] * 20;
   const cappedBhxhSalary = Math.min(emp.insuranceSalary, bhxhCap);
@@ -256,7 +356,7 @@ export function calculatePayroll(emp: EmployeeInput, cfg: PayrollConfig = DEFAUL
   const tnldEr = cappedBhxhSalary * cfg.tnldErRate;
   const totalInsuranceEr = bhxhEr + bhytEr + bhtnEr + tnldEr;
 
-  // Nhóm 6 — Khấu trừ & PIT
+  // Nhóm 6
   const personalDeduction = cfg.personalDeduction;
   const dependentDeduction = emp.dependents * cfg.dependentDeduction;
 
@@ -267,7 +367,6 @@ export function calculatePayroll(emp: EmployeeInput, cfg: PayrollConfig = DEFAUL
 
   const { pit, breakdown } = calcPIT(taxableIncomeAfterDeductions, cfg.taxBrackets);
 
-  // Nhóm 7 — Thực lãnh
   const netAfterPIT = grossIncome - totalInsuranceEmp - pit;
   const netTakeHome = netAfterPIT + emp.additions - emp.otherDeductions;
   const totalCompanyExpenses = grossIncome + totalInsuranceEr;
@@ -286,17 +385,19 @@ export function calculatePayroll(emp: EmployeeInput, cfg: PayrollConfig = DEFAUL
     nonTaxableBreakdown: {
       lunch: lunchNonTaxable,
       uniform: emp.uniformAllowance,
-      phone: emp.fixedPhoneAllowance,
+      phone: phoneManualNT + autoPhoneNT,
       housing: housingNonTaxableEffective,
     },
     taxableBreakdown: {
-      transportation: emp.transportationAllowance,
-      attendance: emp.attendanceBonus,
+      transportation: emp.transportationAllowance + autoTransportT,
+      attendance: emp.attendanceBonus + autoAttendanceT,
       performance: emp.performanceBonus,
-      housing: emp.housingTaxable + housingExcessTaxable,
+      housing: housingTaxableForced + housingExcessTaxable,
       ot: emp.otTaxable,
       other: emp.otherTaxable,
+      bonus: autoBonusT,
     },
+    autoAllowances: auto,
 
     grossIncome,
     taxableIncomeGross,
@@ -351,7 +452,9 @@ function calcPIT(taxable: number, brackets: PayrollConfig["taxBrackets"]) {
 }
 
 export function formatVND(n: number): string {
-  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(Math.round(n)) + " ₫";
+  const rounded = Math.round(n);
+  const sign = rounded < 0 ? "-" : "";
+  return sign + new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(Math.abs(rounded)) + " ₫";
 }
 
 export function formatNumber(n: number): string {
