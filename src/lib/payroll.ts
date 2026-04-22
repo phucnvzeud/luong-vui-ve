@@ -209,9 +209,8 @@ export function calculatePayroll(emp: EmployeeInput, cfg: PayrollConfig = DEFAUL
     : 0;
 
   // Nhóm 3 — Phụ cấp
-  // Ăn trưa: phần vượt cap → tính thuế
-  const lunchNonTaxable = Math.min(emp.lunchAllowance, cfg.lunchAllowanceCap);
-  const lunchTaxableExcess = Math.max(0, emp.lunchAllowance - cfg.lunchAllowanceCap);
+  // Ăn trưa: toàn bộ là phụ cấp không tính thuế (không áp dụng cap)
+  const lunchNonTaxable = emp.lunchAllowance;
 
   const nonTaxableBeforeHousing =
     lunchNonTaxable + emp.uniformAllowance + emp.fixedPhoneAllowance;
@@ -222,8 +221,7 @@ export function calculatePayroll(emp: EmployeeInput, cfg: PayrollConfig = DEFAUL
     emp.attendanceBonus +
     emp.performanceBonus +
     emp.otTaxable +
-    emp.otherTaxable +
-    lunchTaxableExcess;
+    emp.otherTaxable;
 
   const taxableBaseForHousingCap =
     actualSalaryForWorkedDays + taxableBenefitsExHousing + emp.housingTaxable;
@@ -297,7 +295,7 @@ export function calculatePayroll(emp: EmployeeInput, cfg: PayrollConfig = DEFAUL
       performance: emp.performanceBonus,
       housing: emp.housingTaxable + housingExcessTaxable,
       ot: emp.otTaxable,
-      other: emp.otherTaxable + lunchTaxableExcess,
+      other: emp.otherTaxable,
     },
 
     grossIncome,
