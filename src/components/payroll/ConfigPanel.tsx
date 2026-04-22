@@ -3,8 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { DEFAULT_CONFIG, type PayrollConfig } from "@/lib/payroll";
+import { DEFAULT_CONFIG, EMPLOYEE_LEVELS, type PayrollConfig, type EmployeeLevel } from "@/lib/payroll";
 import { Settings2, RotateCcw, HardDriveDownload } from "lucide-react";
 
 export const CONFIG_STORAGE_KEY = "payrollvn:config:v1";
