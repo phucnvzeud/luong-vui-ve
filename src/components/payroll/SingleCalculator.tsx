@@ -387,7 +387,7 @@ export function SingleCalculator({ config }: Props) {
               <h4 className="font-semibold text-sm">Non-taxable Benefits</h4>
             </div>
             <div className="space-y-1.5 text-sm">
-              <Row label="Lunch (≤ cap)" value={result.nonTaxableBreakdown.lunch} muted />
+              <Row label="Lunch" value={result.nonTaxableBreakdown.lunch} muted />
               <Row label="Uniform" value={result.nonTaxableBreakdown.uniform} muted />
               <Row label="Phone (khoán)" value={result.nonTaxableBreakdown.phone} muted />
               <Row label="Housing (≤15%)" value={result.nonTaxableBreakdown.housing} muted />
