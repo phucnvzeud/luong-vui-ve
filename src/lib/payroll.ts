@@ -30,8 +30,9 @@ export interface PayrollConfig {
   dependentDeduction: number;
   taxBrackets: { upTo: number | null; rate: number }[];
   // Công chuẩn & phụ cấp giới hạn
-  standardWorkingDays: number; // công chuẩn / tháng (mặc định 26)
+  standardWorkingDays: number; // công chuẩn / tháng (mặc định 22)
   lunchAllowanceCap: number; // ăn trưa miễn thuế tối đa (730k/tháng)
+  lunchPerDay: number; // đơn giá ăn trưa / ngày công (mặc định 50.000đ)
   housingNonTaxableRatio: number; // tối đa 15% TN chịu thuế (không gồm chính housing)
   defaultRegion: Region;
 }
@@ -61,8 +62,9 @@ export const DEFAULT_CONFIG: PayrollConfig = {
     { upTo: 100_000_000, rate: 0.3 },
     { upTo: null, rate: 0.35 },
   ],
-  standardWorkingDays: 26,
+  standardWorkingDays: 22,
   lunchAllowanceCap: 730_000,
+  lunchPerDay: 50_000,
   housingNonTaxableRatio: 0.15,
   defaultRegion: 1,
 };
@@ -178,7 +180,7 @@ export function makeBlankEmployee(id: string, region: Region = 1): EmployeeInput
     salaryAppliedRatio: 1,
     contractSalary: 0,
     insuranceSalary: 0,
-    totalWorkingDays: 26,
+    totalWorkingDays: 22,
     lunchAllowance: 0,
     uniformAllowance: 0,
     fixedPhoneAllowance: 0,

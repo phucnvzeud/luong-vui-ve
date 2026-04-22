@@ -78,6 +78,11 @@ export function ConfigPanel({ config, setConfig }: Props) {
           ))}
         </Section>
 
+        <Section title="Phụ cấp & công chuẩn">
+          <NumRow label="Công chuẩn / tháng" value={config.standardWorkingDays} onChange={(v) => update({ standardWorkingDays: v })} suffix="ngày" small />
+          <NumRow label="Đơn giá ăn trưa / ngày" value={config.lunchPerDay} onChange={(v) => update({ lunchPerDay: v })} suffix="₫" />
+        </Section>
+
         <Section title="Giảm trừ thuế TNCN">
           <NumRow label="Giảm trừ bản thân" value={config.personalDeduction} onChange={(v) => update({ personalDeduction: v })} suffix="₫" />
           <NumRow label="Giảm trừ / người phụ thuộc" value={config.dependentDeduction} onChange={(v) => update({ dependentDeduction: v })} suffix="₫" />
