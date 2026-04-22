@@ -127,7 +127,19 @@ export function SingleCalculator({ config }: Props) {
   };
 
   const update = <K extends keyof EmployeeInput>(key: K, value: EmployeeInput[K]) =>
-    setEmp((p) => ({ ...p, [key]: value }));
+    setEmp((p) => {
+      const next = { ...p, [key]: value };
+      // Auto-tính lunch theo ngày công × đơn giá
+      if (key === "totalWorkingDays") {
+        next.lunchAllowance = Math.max(0, Number(value) || 0) * config.lunchPerDay;
+      }
+      return next;
+    });
+
+  // Đồng bộ lunch khi đơn giá trong config thay đổi
+  useEffect(() => {
+    setEmp((p) => ({ ...p, lunchAllowance: Math.max(0, p.totalWorkingDays || 0) * config.lunchPerDay }));
+  }, [config.lunchPerDay]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -279,7 +291,7 @@ export function SingleCalculator({ config }: Props) {
           subtitle="Lunch, đồng phục, phone khoán, housing ≤ 15%"
         >
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Lunch Allowance" hint="Toàn bộ miễn thuế">
+            <Field label="Lunch Allowance" hint={`Tự tính: ${emp.totalWorkingDays || 0} ngày × ${config.lunchPerDay.toLocaleString("vi-VN")}₫`}>
               <NumInput value={emp.lunchAllowance} onChange={(v) => update("lunchAllowance", v)} />
             </Field>
             <Field label="Uniform">
