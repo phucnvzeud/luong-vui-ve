@@ -276,11 +276,12 @@ export function SingleCalculator({ config }: Props) {
         <SectionCard
           icon={<Gift className="h-4 w-4 text-primary" />}
           title="3a. Phụ cấp KHÔNG tính thuế"
-          subtitle="Lunch ≤ 730k, đồng phục, phone khoán, housing ≤ 15%"
+          subtitle="Lunch, đồng phục, phone khoán, housing ≤ 15%"
         >
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Lunch Allowance" hint={`Cap miễn thuế: ${config.lunchAllowanceCap.toLocaleString("vi-VN")}đ`}>
+            <Field label="Lunch Allowance" hint="Toàn bộ miễn thuế">
               <NumInput value={emp.lunchAllowance} onChange={(v) => update("lunchAllowance", v)} />
+            </Field>
             </Field>
             <Field label="Uniform">
               <NumInput value={emp.uniformAllowance} onChange={(v) => update("uniformAllowance", v)} />
