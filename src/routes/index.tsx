@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { SingleCalculator } from "@/components/payroll/SingleCalculator";
 import { BulkPayroll } from "@/components/payroll/BulkPayroll";
-import { ConfigPanel } from "@/components/payroll/ConfigPanel";
+import { ConfigPanel, CONFIG_STORAGE_KEY } from "@/components/payroll/ConfigPanel";
 import { DEFAULT_CONFIG, type PayrollConfig } from "@/lib/payroll";
 import { Calculator, Sparkles } from "lucide-react";
 
@@ -20,6 +20,31 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const [config, setConfig] = useState<PayrollConfig>(DEFAULT_CONFIG);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Load saved config from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setConfig({ ...DEFAULT_CONFIG, ...parsed });
+      }
+    } catch {
+      /* ignore */
+    }
+    setHydrated(true);
+  }, []);
+
+  // Auto-persist config when it changes (after hydration)
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+    } catch {
+      /* ignore */
+    }
+  }, [config, hydrated]);
 
   return (
     <div className="min-h-screen bg-background">
