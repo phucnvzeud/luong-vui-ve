@@ -50,9 +50,81 @@ const SAMPLE: EmployeeInput = {
   otherDeductions: 0,
 };
 
+const STORAGE_KEY = "payrollvn:savedEmployees:v1";
+
+type SavedEntry = { key: string; label: string; data: EmployeeInput };
+
+function loadSaved(): SavedEntry[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSaved(list: SavedEntry[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore quota / privacy mode */
+  }
+}
+
 export function SingleCalculator({ config }: Props) {
   const [emp, setEmp] = useState<EmployeeInput>(SAMPLE);
+  const [saved, setSaved] = useState<SavedEntry[]>([]);
+  const [loadKey, setLoadKey] = useState<string>("");
   const result = calculatePayroll(emp, config);
+
+  useEffect(() => {
+    setSaved(loadSaved());
+  }, []);
+
+  const buildKey = (e: EmployeeInput) =>
+    (e.employeeCode?.trim() || e.name.trim() || `nv-${Date.now()}`).toLowerCase();
+
+  const buildLabel = (e: EmployeeInput) => {
+    const code = e.employeeCode?.trim();
+    const name = e.name.trim() || "Không tên";
+    return code ? `${code} — ${name}` : name;
+  };
+
+  const handleSave = () => {
+    const key = buildKey(emp);
+    const label = buildLabel(emp);
+    const next = [...saved.filter((s) => s.key !== key), { key, label, data: emp }]
+      .sort((a, b) => a.label.localeCompare(b.label, "vi"));
+    setSaved(next);
+    persistSaved(next);
+    setLoadKey(key);
+    toast.success(`Đã lưu "${label}" vào trình duyệt`);
+  };
+
+  const handleLoad = (key: string) => {
+    const found = saved.find((s) => s.key === key);
+    if (!found) return;
+    setEmp(found.data);
+    setLoadKey(key);
+    toast.success(`Đã tải "${found.label}"`);
+  };
+
+  const handleDelete = () => {
+    if (!loadKey) return;
+    const target = saved.find((s) => s.key === loadKey);
+    const next = saved.filter((s) => s.key !== loadKey);
+    setSaved(next);
+    persistSaved(next);
+    setLoadKey("");
+    if (target) toast.success(`Đã xoá "${target.label}"`);
+  };
+
+  const handleNew = () => {
+    setEmp(makeBlankEmployee(crypto.randomUUID(), config.defaultRegion));
+    setLoadKey("");
+  };
 
   const update = <K extends keyof EmployeeInput>(key: K, value: EmployeeInput[K]) =>
     setEmp((p) => ({ ...p, [key]: value }));
@@ -61,6 +133,60 @@ export function SingleCalculator({ config }: Props) {
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
       {/* INPUT — 7 nhóm */}
       <div className="lg:col-span-2 space-y-4">
+        {/* Toolbar lưu/tải */}
+        <Card className="p-4 shadow-soft border-border/60">
+          <div className="flex items-center gap-2 mb-3">
+            <FolderOpen className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm">Hồ sơ nhân viên đã lưu</h3>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Select value={loadKey || undefined} onValueChange={handleLoad}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder={saved.length ? "Tải hồ sơ đã lưu…" : "Chưa có hồ sơ nào"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {saved.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon" onClick={handleNew} title="Tạo mới">
+                <FilePlus2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleSave} className="flex-1" size="sm">
+                <Save className="h-3.5 w-3.5 mr-1" />
+                Lưu hồ sơ hiện tại
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={!loadKey}>
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    Xoá
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Xoá hồ sơ đã lưu?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Hồ sơ "{saved.find((s) => s.key === loadKey)?.label}" sẽ bị xoá khỏi trình duyệt. Hành động này không thể hoàn tác.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Huỷ</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Xoá</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Lưu vào localStorage trình duyệt. Hồ sơ trùng Mã NV sẽ ghi đè.
+            </p>
+          </div>
+        </Card>
+
         {/* Nhóm 1 */}
         <SectionCard
           icon={<Briefcase className="h-4 w-4 text-primary" />}
