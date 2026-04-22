@@ -403,7 +403,7 @@ function NumInput({ value, onChange }: { value: number; onChange: (v: number) =>
       inputMode="numeric"
       value={value ? value.toLocaleString("vi-VN") : ""}
       onChange={(e) => {
-        const raw = e.target.value.replace(/[^\d.-]/g, "");
+        const raw = e.target.value.replace(/[^\d]/g, "");
         onChange(raw ? Number(raw) : 0);
       }}
       className="font-mono"
