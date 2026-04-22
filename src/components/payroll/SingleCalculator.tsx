@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import {
   calculatePayroll, formatVND, makeBlankEmployee,
   type EmployeeInput, type PayrollConfig, type Region, type ContractType,
@@ -11,6 +18,7 @@ import {
 import {
   ArrowRight, Wallet, Receipt, Building2, TrendingDown,
   Briefcase, CalendarDays, Gift, ShieldCheck, Users, PiggyBank,
+  Save, FolderOpen, Trash2, FilePlus2,
 } from "lucide-react";
 
 interface Props { config: PayrollConfig; }
