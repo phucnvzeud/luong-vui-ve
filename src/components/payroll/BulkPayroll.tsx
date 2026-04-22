@@ -43,7 +43,14 @@ export function BulkPayroll({ config }: Props) {
   const [rows, setRows] = useState<EmployeeInput[]>(samples);
 
   const update = <K extends keyof EmployeeInput>(id: string, key: K, value: EmployeeInput[K]) =>
-    setRows((p) => p.map((r) => (r.id === id ? { ...r, [key]: value } : r)));
+    setRows((p) => p.map((r) => {
+      if (r.id !== id) return r;
+      const next = { ...r, [key]: value };
+      if (key === "totalWorkingDays") {
+        next.lunchAllowance = Math.max(0, Number(value) || 0) * config.lunchPerDay;
+      }
+      return next;
+    }));
 
   const add = () => setRows((p) => [...p, makeBlankEmployee(String(Date.now()), 1)]);
   const remove = (id: string) => setRows((p) => p.filter((r) => r.id !== id));
