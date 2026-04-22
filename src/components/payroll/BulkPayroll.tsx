@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  calculatePayroll, formatNumber, makeBlankEmployee,
-  type EmployeeInput, type PayrollConfig, type Region,
+  calculatePayroll, formatNumber, makeBlankEmployee, EMPLOYEE_LEVELS,
+  type EmployeeInput, type PayrollConfig, type Region, type EmployeeLevel,
 } from "@/lib/payroll";
 import { Plus, Trash2, FileSpreadsheet, Users2 } from "lucide-react";
 
