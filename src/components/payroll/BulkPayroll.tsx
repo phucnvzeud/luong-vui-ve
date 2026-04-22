@@ -157,7 +157,7 @@ export function BulkPayroll({ config }: Props) {
           <thead>
             <tr className="text-xs text-muted-foreground">
               {[
-                "#", "Mã NV", "Họ tên", "Chức vụ", "Contract Salary", "Lương BH",
+                "#", "Mã NV", "Họ tên", "Cấp", "Chức vụ", "Contract Salary", "Lương BH",
                 "Công", "Lunch", "Phone", "Transport", "Performance", "OT",
                 "NPT", "Vùng", "Gross Income", "BH (NLĐ)", "PIT", "Net Take-home", "Cost DN", "",
               ].map((h, i) => (
